@@ -7,16 +7,18 @@ import Search from '@/views/SearchEmployee.vue';
 // Definición de rutas con tipado explícito
 const routes: Array<RouteRecordRaw> = [
   { 
+    path: '/', 
+    redirect: '/home' 
+  },
+  { 
+    name: 'home',
     path: '/home', 
     component: Home 
   },
   { 
+    name: 'search',
     path: '/search', 
     component: Search 
-  },
-  { 
-    path: '/', 
-    redirect: '/home' 
   },
 ];
 

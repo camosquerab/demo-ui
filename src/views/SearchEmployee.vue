@@ -1,64 +1,80 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import EmployeeTable from '../components/EmployeeTable.vue';
+import { getAllEmployees, getEmployee, type Employee } from '@/api/employee';
 
-export interface Employee {
-  id: number;
-  employeeName: string;
-  employeeSalary: number;
-  employeeAnualSalary: number;
-  employeeAge: number;
-  profileImage: string;
+enum MessageType {
+  ERROR = 'error',
+  ALERT = 'alert',
 }
 
 const employeeId = ref<number | null>(null);
 const items = ref<Employee[]>([]);
+
 const snackbar = ref(false);
+const snackbarColor = ref('red');
+const snackbarColorMapping = {
+  [MessageType.ERROR]: 'red',
+  [MessageType.ALERT]: 'yellow',
+};
 const requestError = ref('');
+
 const loading = ref(false);
+
 const inputRules = [
   (v: string) => !isNaN(Number(v)) || 'Input must be a number',
 ];
 
 async function wrapLoading(callback: () => Promise<any>) {
-  loading.value = true;
   try {
-    await callback();
+    loading.value = true;
+    return await callback();
   } catch (error: any) {
-    requestError.value = error.message;
-    snackbar.value = true;
+    loading.value = false;
   } finally {
     loading.value = false;
   }
 }
 
+function callSnackbark(message: string, type: MessageType) {
+  snackbarColor.value = snackbarColorMapping[type];
+  requestError.value = message;
+  snackbar.value = true;
+}
+
 async function searchEmployee() {
   return wrapLoading(async () => {
-    let res;
-    if (employeeId.value === null) {
-      res = await fetch('http://localhost:8080/api/employees');
-    } else {
-      res = await fetch(`http://localhost:8080/api/employees/${employeeId.value}`);
-    }
-
+    const res = employeeId.value
+      ? await getEmployee(employeeId.value)
+      : await getAllEmployees();
+      
     if (res.status === 429) {
-      requestError.value = 'Too many requests, please try again later.';
-      snackbar.value = true;
-      return;
-    }
-
-    if (res.status !== 200) {
-      const errData = await res.json();
-      requestError.value = errData.message || 'An error occurred';
-      snackbar.value = true;
+      callSnackbark('Too many requests, please try again later', MessageType.ALERT);
       items.value = [];
       return;
     }
 
-    const data = employeeId.value === null
-      ? await res.json() as Employee[]
-      : [await res.json() as Employee];
-    items.value = data;
+    if (res.status === 400) {
+      callSnackbark('Invalid input. Please provide a valid number.', MessageType.ALERT);
+      items.value = [];
+      return;
+    }
+    
+
+    if (res.status !== 200) {
+      callSnackbark(requestError.value = res.statusText || 'Unexpected error', MessageType.ERROR);
+      items.value = [];
+      return;
+    }
+    
+    if (!res.data) {
+      items.value = [];
+      return;
+    }
+    
+    items.value = Array.isArray(res.data) 
+      ? res.data 
+      : [res.data];
   });
 }
 </script>
@@ -69,17 +85,18 @@ async function searchEmployee() {
       label="Employee ID"
       v-model="employeeId"
       :rules="inputRules"
+      @keydown.enter="searchEmployee"
     ></v-text-field>
     <v-btn variant="outlined" :loading="loading" @click="searchEmployee">Search Employee</v-btn>
 
     <EmployeeTable :items="items"></EmployeeTable>
 
     <v-snackbar
-      color="red"
+      :color="snackbarColor"
       v-model="snackbar"
       multi-line
     >
-      Error: {{ requestError }}
+      {{ requestError }}
 
       <template v-slot:actions>
         <v-btn
