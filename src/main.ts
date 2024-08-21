@@ -1,18 +1,33 @@
-import './assets/main.css'
-import { createApp } from 'vue'
+import { createApp } from 'vue';
+import App from './App.vue';
 
 // Vuetify
-import 'vuetify/styles'
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
+import 'vuetify/styles';
+import { createVuetify } from 'vuetify';
+import * as components from 'vuetify/components';
+import * as directives from 'vuetify/directives';
 
-// Components
-import App from './App.vue'
+// Router
+import { createRouter, createWebHistory } from 'vue-router';
+import Home from './views/HomeEmployee.vue';
+import SearchEmployee from './views/SearchEmployee.vue';
 
 const vuetify = createVuetify({
   components,
   directives,
-})
+});
 
-createApp(App).use(vuetify).mount('#app')
+const routes = [
+  { path: '/home', component: Home },
+  { path: '/search', component: SearchEmployee },
+];
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+});
+
+const app = createApp(App);
+app.use(vuetify);
+app.use(router);
+app.mount('#app');
